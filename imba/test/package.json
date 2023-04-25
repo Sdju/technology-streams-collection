@@ -1,0 +1,16 @@
+{
+  "name": "test",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "imba": "^2.0.0-alpha.229",
+    "vite": "^4.3.2",
+    "vite-plugin-imba": "^0.10.3"
+  }
+}
