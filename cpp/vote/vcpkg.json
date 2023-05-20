@@ -1,0 +1,27 @@
+{
+  "name" : "vote",
+  "version-string" : "1.0.0",
+  "builtin-baseline" : "cb1301e9977b5f10b49f7988f68b808f7a558970",
+  "dependencies" : [ {
+    "name" : "restinio",
+    "version>=" : "0.6.18"
+  }, {
+    "name" : "asio",
+    "version>=" : "1.24.0#1"
+  }, {
+    "name" : "fmt",
+    "version>=" : "6.1.2"
+  }, {
+    "name" : "http-parser",
+    "version>=" : "2.9.4#3"
+  }, {
+    "name" : "vcpkg-cmake-config",
+    "version>=" : "2022-02-06#1"
+  }, {
+    "name" : "vcpkg-cmake",
+    "version>=" : "2022-12-22"
+  } ],
+  "overrides": [
+    { "name": "fmt", "version": "6.1.2" }
+  ]
+}
