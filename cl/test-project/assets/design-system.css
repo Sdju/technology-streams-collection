@@ -1,0 +1,57 @@
+.c-red {
+  color: var(--color-red, #A33);
+}
+
+.bc-red {
+  background-color: var(--color-red, #A33);
+}
+
+.c-blue {
+  color: var(--color-blue, #33A);
+}
+
+.bc-blue {
+  background-color: var(--color-blue, #33A);
+}
+
+.p-xs {
+  padding: var(--spaces-xs, 4px);
+}
+
+.m-xs {
+  margin: var(--spaces-xs, 4px);
+}
+
+.p-sm {
+  padding: var(--spaces-sm, 8px);
+}
+
+.m-sm {
+  margin: var(--spaces-sm, 8px);
+}
+
+.p-md {
+  padding: var(--spaces-md, 12px);
+}
+
+.m-md {
+  margin: var(--spaces-md, 12px);
+}
+
+.p-xl {
+  padding: var(--spaces-xl, 16px);
+}
+
+.m-xl {
+  margin: var(--spaces-xl, 16px);
+}
+
+:root {
+  --color-red: #A33;
+  --color-blue: #33A;
+  --spaces-xs: 4px;
+  --spaces-sm: 8px;
+  --spaces-md: 12px;
+  --spaces-xl: 16px;
+}
+

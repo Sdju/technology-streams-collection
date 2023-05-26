@@ -1,0 +1,12 @@
+{
+    "colors": {
+        "red": "#A33",
+        "blue": "#33A"
+    },
+    "spaces": {
+        "xs": "4px",
+        "sm": "8px",
+        "md": "12px",
+        "xl": "16px"
+    }
+}
