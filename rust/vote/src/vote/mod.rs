@@ -1,13 +1,11 @@
+use itertools::{Either, Itertools};
+use serde::{Deserialize, Serialize};
 use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
-use itertools::{Itertools, Either};
 use std::fmt::Write;
 use std::fs;
-use serde::{Deserialize, Serialize};
 
-#[derive(Debug)]
-#[derive(Serialize)]
-#[derive(Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct VoteItem {
     pub name: String,
     pub aliases: HashSet<String>,
@@ -26,11 +24,7 @@ impl VoteItem {
     }
 }
 
-
-#[derive(Default)]
-#[derive(Debug)]
-#[derive(Serialize)]
-#[derive(Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Vote {
     pub items: HashMap<String, VoteItem>,
     pub aliases: HashMap<String, String>,
@@ -54,7 +48,10 @@ impl Vote {
         }
 
         if let Some(alias) = self.aliases.get(vote_str) {
-            let item = self.items.get_mut(alias).expect("Alias for nonexistent item");
+            let item = self
+                .items
+                .get_mut(alias)
+                .expect("Alias for nonexistent item");
             item.count += 1;
             return;
         }
@@ -68,7 +65,10 @@ impl Vote {
     }
 
     pub fn rename(&mut self, from_str: &str, to_str: &str) {
-        let item = self.items.remove(from_str).expect("Rename for nonexistent item");
+        let item = self
+            .items
+            .remove(from_str)
+            .expect("Rename for nonexistent item");
         if let Some(old_item) = self.items.get_mut(to_str) {
             old_item.count += item.count;
         } else {
@@ -88,13 +88,20 @@ impl Vote {
     }
 
     pub fn confirm_as_alias(&mut self, vote_str: &str, alias_to_str: &str) {
-        let vote_item = self.items.remove(vote_str).expect("Confirm for nonexistent element");
+        let vote_item = self
+            .items
+            .remove(vote_str)
+            .expect("Confirm for nonexistent element");
         let count = vote_item.count;
-        let mut alias_to_item = self.items.get_mut(alias_to_str).unwrap();
+        let alias_to_item = self
+            .items
+            .get_mut(alias_to_str)
+            .expect("Confirm for nonexistent element");
 
         alias_to_item.aliases.insert(vote_str.to_string());
         alias_to_item.count += count;
-        self.aliases.insert(vote_str.to_string(), alias_to_str.to_string());
+        self.aliases
+            .insert(vote_str.to_string(), alias_to_str.to_string());
         self.save();
     }
 
@@ -104,18 +111,15 @@ impl Vote {
     }
 
     pub fn get_votes_repr(&self) -> String {
-        let mut items_pairs = self.items
-            .iter()
-            .collect::<Vec<_>>();
+        let mut items_pairs = self.items.iter().collect::<Vec<_>>();
         items_pairs.sort_by_key(|(_, item)| Reverse(item.count));
 
-        let (confirmed, unconfirmed): (String, String) = items_pairs
-            .into_iter()
-            .partition_map(|(name, item)| {
+        let (confirmed, unconfirmed): (String, String) =
+            items_pairs.into_iter().partition_map(|(name, item)| {
                 let line = format!("{} - {}\n", name, item.count);
                 match item.confirmed {
                     true => Either::Left(line),
-                    false => Either::Right(line)
+                    false => Either::Right(line),
                 }
             });
 
@@ -142,4 +146,31 @@ impl Vote {
             *self = serde_json::from_str(&data).expect("File data has been corrupted")
         }
     }
+
+    pub fn get_as_json(&self) -> String {
+        let (confirmed, unconfirmed): (Vec<_>, Vec<_>) = self
+            .items
+            .iter()
+            .sorted_by_key(|(_, item)| Reverse(item.count))
+            .partition_map(|(name, item)| {
+                let line = (name.to_string(), item.count);
+                match item.confirmed {
+                    true => Either::Left(line),
+                    false => Either::Right(line),
+                }
+            });
+
+        let votes_json_repr = VotesJsonRepr {
+            confirmed,
+            unconfirmed,
+        };
+
+        serde_json::to_string(&votes_json_repr).expect("WTF")
+    }
+}
+
+#[derive(Default, Debug, Serialize, Deserialize)]
+struct VotesJsonRepr {
+    confirmed: Vec<(String, i32)>,
+    unconfirmed: Vec<(String, i32)>,
 }

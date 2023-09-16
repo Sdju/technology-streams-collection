@@ -1,24 +1,24 @@
 mod vote;
 
 use crate::vote::Vote;
-use axum::{
-    extract::State,
-    routing::get,
-    Router,
-};
+use axum::extract::Query;
+use axum::{extract::State, routing::get, Router};
 use serde::Deserialize;
 use std::sync::{Arc, Mutex};
-use axum::extract::Query;
+use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Clone)]
 struct AppState {
-    vote: Arc<Mutex<Vote>>
+    vote: Arc<Mutex<Vote>>,
 }
 
 async fn show(State(state): State<AppState>) -> String {
     state.vote.lock().unwrap().get_votes_repr()
 }
 
+async fn votes_json(State(state): State<AppState>) -> String {
+    state.vote.lock().unwrap().get_as_json()
+}
 
 #[derive(Deserialize)]
 struct VoteUpQuery {
@@ -31,7 +31,6 @@ async fn vote_up(Query(query): Query<VoteUpQuery>, State(state): State<AppState>
     vote.vote_up(&query.item);
     vote.get_votes_repr()
 }
-
 
 #[derive(Deserialize)]
 struct BanQuery {
@@ -58,7 +57,6 @@ async fn rename(Query(query): Query<RenameQuery>, State(state): State<AppState>)
     vote.get_votes_repr()
 }
 
-
 #[derive(Deserialize)]
 struct ConfirmQuery {
     item: String,
@@ -77,7 +75,6 @@ async fn confirm(Query(query): Query<ConfirmQuery>, State(state): State<AppState
     vote.get_votes_repr()
 }
 
-
 #[tokio::main]
 async fn main() {
     let shared_state = AppState {
@@ -89,14 +86,17 @@ async fn main() {
         vote.load();
     }
 
+    let cors = CorsLayer::new().allow_origin(Any);
 
     let app = Router::new()
-        .route("/", get(|| async { "Hello, World!" }))
+        .route("/", get(show))
         .route("/show", get(show))
+        .route("/votes", get(votes_json))
         .route("/vote", get(vote_up))
         .route("/confirm", get(confirm))
         .route("/ban", get(ban))
         .route("/rename", get(rename))
+        .layer(cors)
         .with_state(shared_state);
 
     println!("Server started");
