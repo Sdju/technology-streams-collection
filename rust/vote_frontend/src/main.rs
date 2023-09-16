@@ -2,11 +2,7 @@ use leptos::*;
 use leptos::leptos_dom::logging::console_log;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Cat {
-    url: String,
-}
+use reqwasm::http::Request;
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize)]
 struct VotesJsonRepr {
@@ -20,33 +16,9 @@ pub enum CatError {
     NonZeroCats,
 }
 
-type CatCount = usize;
-
-async fn fetch_cats(count: CatCount) -> error::Result<Vec<String>> {
-    if count > 0 {
-        // make the request
-        let res = reqwasm::http::Request::get(&format!(
-            "https://api.thecatapi.com/v1/images/search?limit={count}",
-        ))
-            .send()
-            .await?
-            // convert it to JSON
-            .json::<Vec<Cat>>()
-            .await?
-            // extract the URL field for each cat
-            .into_iter()
-            .take(count)
-            .map(|cat| cat.url)
-            .collect::<Vec<_>>();
-        Ok(res)
-    } else {
-        Err(CatError::NonZeroCats.into())
-    }
-}
-
-async fn fetch_votes(_: CatCount) -> error::Result<VotesJsonRepr> {
+async fn fetch_votes() -> error::Result<VotesJsonRepr> {
     // make the request
-    let res = reqwasm::http::Request::get(&format!(
+    let res = Request::get(&format!(
         "http://127.0.0.1:8000/votes",
     ))
         .send()
@@ -57,18 +29,44 @@ async fn fetch_votes(_: CatCount) -> error::Result<VotesJsonRepr> {
 }
 
 #[component]
-pub fn SimpleCounter(initial_value: i32) -> impl IntoView {
-    let (cat_count, set_cat_count) = create_signal::<CatCount>(10);
+pub fn ConfirmedItem(name: String, votes: i32) -> impl IntoView {
+    let name_copy = name.to_owned();
+    let vote_up = create_action(|_| {
+        let name_copy = name_copy.to_owned();
+        async move {
+            let test = Request::get(&format!(
+                "http://127.0.0.1:8000/vote?item={name_copy}",
+            ))
+                .send()
+                .await
+                .unwrap()
+                .text()
+                .await
+                .unwrap();
+            console_log(&test);
+        }
+    });
 
-    // we use local_resource here because
-    // 1) our error type isn't serializable/deserializable
-    // 2) we're not doing server-side rendering in this example anyway
-    //    (during SSR, create_resource will begin loading on the server and resolve on the client)
-    let votes = create_local_resource(cat_count, fetch_votes);
+    view! {
+        <div class="confirmed-item">
+            <span>{&name} -  {votes}</span>
+            <button
+                class="confirmed-item__increment"
+                on:click=move |_| vote_up.dispatch(())
+            >+</button>
+        </div>
+    }
+}
+
+#[component]
+pub fn SimpleCounter(initial_value: i32) -> impl IntoView {
+    let votes = create_local_resource(move || (), |_| fetch_votes());
 
     let confirmed_votes_view = move || votes.and_then(|data: &VotesJsonRepr| {
         data.confirmed.iter()
-            .map(|s| view! { <p>{&s.0} -  {s.1}</p> })
+            .map(|s| view! {
+                <ConfirmedItem name=s.0.clone() votes=s.1 />
+            })
             .collect_view()
     });
 
@@ -79,17 +77,13 @@ pub fn SimpleCounter(initial_value: i32) -> impl IntoView {
     });
 
     let (value, set_value) = create_signal(initial_value);
-    //
     // let clear = move |_| set_value(0);
     // let decrement = move |_| set_value.update(|value| *value -= 1);
-    // let increment = move |_| set_value.update(|value| *value += 1);
 
     // create user interfaces with the declarative `view!` macro
     view! {
         <div>
             // <button on:click=clear>Clear</button>
-            // <button on:click=decrement>-1</button>
-            // text nodes can be quoted or unquoted
             {confirmed_votes_view }
             <span> Unconfirmed </span>
             {unconfirmed_votes_view }
