@@ -31,7 +31,7 @@ async fn fetch_votes() -> error::Result<VotesJsonRepr> {
 #[component]
 pub fn ConfirmedItem(name: String, votes: i32) -> impl IntoView {
     let name_copy = name.to_owned();
-    let vote_up = create_action(|_| {
+    let vote_up = create_action(move |_| {
         let name_copy = name_copy.to_owned();
         async move {
             let test = Request::get(&format!(
@@ -40,10 +40,11 @@ pub fn ConfirmedItem(name: String, votes: i32) -> impl IntoView {
                 .send()
                 .await
                 .unwrap()
-                .text()
+                .json::<VotesJsonRepr>()
                 .await
                 .unwrap();
-            console_log(&test);
+            let json = serde_json::to_string(&test).unwrap();
+            console_log(&json);
         }
     });
 
@@ -60,10 +61,14 @@ pub fn ConfirmedItem(name: String, votes: i32) -> impl IntoView {
 
 #[component]
 pub fn SimpleCounter(initial_value: i32) -> impl IntoView {
-    let votes = create_local_resource(move || (), |_| fetch_votes());
+    let (votes_loader, set_votes_loader) = create_signal(fetch_votes);
+
+    let votes = create_local_resource(move || votes_loader.get(), move |loader| async {
+        loader().await.unwrap();
+    });
 
     let confirmed_votes_view = move || votes.and_then(|data: &VotesJsonRepr| {
-        data.confirmed.iter()
+        votes.confirmed.iter()
             .map(|s| view! {
                 <ConfirmedItem name=s.0.clone() votes=s.1 />
             })
@@ -83,7 +88,6 @@ pub fn SimpleCounter(initial_value: i32) -> impl IntoView {
     // create user interfaces with the declarative `view!` macro
     view! {
         <div>
-            // <button on:click=clear>Clear</button>
             {confirmed_votes_view }
             <span> Unconfirmed </span>
             {unconfirmed_votes_view }

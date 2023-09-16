@@ -29,7 +29,7 @@ async fn vote_up(Query(query): Query<VoteUpQuery>, State(state): State<AppState>
     println!("+ {}", query.item);
     let mut vote = state.vote.lock().unwrap();
     vote.vote_up(&query.item);
-    vote.get_votes_repr()
+    vote.get_as_json()
 }
 
 #[derive(Deserialize)]
@@ -41,7 +41,7 @@ async fn ban(Query(query): Query<BanQuery>, State(state): State<AppState>) -> St
     println!("❌ {}", query.item);
     let mut vote = state.vote.lock().unwrap();
     vote.ban(&query.item);
-    vote.get_votes_repr()
+    vote.get_as_json()
 }
 
 #[derive(Deserialize)]
@@ -54,7 +54,7 @@ async fn rename(Query(query): Query<RenameQuery>, State(state): State<AppState>)
     println!("ℹ️ {} -> {}", query.item, query.to);
     let mut vote = state.vote.lock().unwrap();
     vote.rename(&query.item, &query.to);
-    vote.get_votes_repr()
+    vote.get_as_json()
 }
 
 #[derive(Deserialize)]
@@ -72,7 +72,7 @@ async fn confirm(Query(query): Query<ConfirmQuery>, State(state): State<AppState
         println!("✔️ {}", query.item);
         vote.confirm(&query.item);
     }
-    vote.get_votes_repr()
+    vote.get_as_json()
 }
 
 #[tokio::main]
