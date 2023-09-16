@@ -29,7 +29,7 @@ async fn fetch_votes() -> error::Result<VotesJsonRepr> {
 }
 
 #[component]
-pub fn ConfirmedItem(name: String, votes: i32) -> impl IntoView {
+pub fn ConfirmedItem(name: String, votes: i32, set_votes: WriteSignal<VotesJsonRepr>) -> impl IntoView {
     let name_copy = name.to_owned();
     let vote_up = create_action(move |_| {
         let name_copy = name_copy.to_owned();
@@ -43,8 +43,7 @@ pub fn ConfirmedItem(name: String, votes: i32) -> impl IntoView {
                 .json::<VotesJsonRepr>()
                 .await
                 .unwrap();
-            let json = serde_json::to_string(&test).unwrap();
-            console_log(&json);
+            set_votes(test);
         }
     });
 
@@ -61,31 +60,49 @@ pub fn ConfirmedItem(name: String, votes: i32) -> impl IntoView {
 
 #[component]
 pub fn SimpleCounter(initial_value: i32) -> impl IntoView {
-    let (votes_loader, set_votes_loader) = create_signal(fetch_votes);
+    // let (confirmed, set_confirmed) = create_signal(Vec::<(String, i32)>::new());
+    // let (unconfirmed, set_unconfirmed) = create_signal(Vec::<(String, i32)>::new());
+    let (votes, set_votes) = create_signal(VotesJsonRepr::default());
 
-    let votes = create_local_resource(move || votes_loader.get(), move |loader| async {
-        loader().await.unwrap();
+    let (loading, set_loading) = create_signal(false);
+    let votes_res = create_local_resource(move || loading.get(), move |_| {
+        fetch_votes()
     });
 
-    let confirmed_votes_view = move || votes.and_then(|data: &VotesJsonRepr| {
-        votes.confirmed.iter()
-            .map(|s| view! {
-                <ConfirmedItem name=s.0.clone() votes=s.1 />
+    // Я СДАЛСЯ, Я НЕ ПОНЯЛ КАК НОРМАЛЬНО РЕШИТЬ ПРОБЛЕМЫ И ЗАПИХАЛ ВСЕ ХОТЬ КАК-НИБУДЬ
+    let confirmed_votes_view = move || {
+        if (votes.get().confirmed.is_empty()) {
+            return votes_res.and_then(|data: &VotesJsonRepr| {
+                data.confirmed.iter()
+                    .map(|s| view! {
+                <ConfirmedItem
+                    name=s.0.clone()
+                    votes=s.1
+                    set_votes=set_votes
+                />
             })
-            .collect_view()
-    });
+                    .collect_view()
+            });
+        }
+        return Some(Ok(votes.get().confirmed.iter()
+            .map(|s| view! {
+                <ConfirmedItem
+                    name=s.0.clone()
+                    votes=s.1
+                    set_votes=set_votes
+                />
+            })
+            .collect_view()));
+    };
 
-    let unconfirmed_votes_view = move || votes.and_then(|data: &VotesJsonRepr| {
+    let unconfirmed_votes_view = move || votes_res.and_then(|data: &VotesJsonRepr| {
         data.unconfirmed.iter()
             .map(|s| view! { <p>{&s.0} -  {s.1}</p> })
             .collect_view()
     });
 
     let (value, set_value) = create_signal(initial_value);
-    // let clear = move |_| set_value(0);
-    // let decrement = move |_| set_value.update(|value| *value -= 1);
 
-    // create user interfaces with the declarative `view!` macro
     view! {
         <div>
             {confirmed_votes_view }
